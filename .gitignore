@@ -8,3 +8,6 @@ CoqSrc.mk
 _CoqProject
 *_full.v
 *_sol.v
+.coqdeps.d
+CoqSrc.mk.conf
+

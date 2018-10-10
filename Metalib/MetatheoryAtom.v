@@ -18,6 +18,9 @@ Require Import Metalib.FSetExtra.
 Require Import Metalib.FSetWeakNotin.
 Require Import Metalib.LibTactics.
 
+From mathcomp.ssreflect Require Import ssreflect ssrbool.
+From mathcomp.ssreflect Require ssrnat.
+
 Require Import Omega.
 
 (* ********************************************************************** *)
@@ -48,7 +51,18 @@ Module Type ATOM <: UsualDecidableType.
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
+  (* atoms can be compared to booleans *)
 
+  Parameter eq_atom : atom -> atom -> bool.
+  Parameter eq_atom_reflect : forall (a b : atom), ssrbool.reflect (a = b) (eq_atom a b).
+
+  (* atoms can be ordered *)
+
+  Parameter ltn_atom : atom -> atom -> bool.
+  Parameter ltn_atom_irreflexive : forall x : atom, ltn_atom x x = false.
+  Parameter ltn_atom_transitive : forall y x z : atom,
+      ltn_atom x y -> ltn_atom y z -> ltn_atom x z.
+  Parameter ltn_atom_total : forall a b : atom, [|| ltn_atom a b, eq_atom a b | ltn_atom b a].
 End ATOM.
 
 (** The implementation of the above interface is hidden for
@@ -91,7 +105,7 @@ Module Atom : ATOM.
 
   Definition fresh (l : list atom) :=
     match atom_fresh_for_list l with
-      (exist _ x _) => x
+      (exist   x _) => x
     end.
 
   Lemma fresh_not_in : forall l, ~ In (fresh l) l.
@@ -104,8 +118,35 @@ Module Atom : ATOM.
 
   Include HasUsualEq <+ UsualIsEq <+ UsualIsEqOrig.
 
-  (* end hide *)
+  (* equality and ordered *)
 
+  Definition eq_atom (a b : nat) : bool := ssrnat.eqn a b.
+
+  Lemma eq_atom_reflect : forall (a b : nat), ssrbool.reflect (a = b) (eq_atom a b).
+  Proof.
+    intros ; apply ssrnat.eqnP.
+  Qed.
+
+  Definition ltn_atom (a b : atom) : bool := ssrnat.ltn a b.
+  Lemma ltn_atom_irreflexive : forall x : nat, ltn_atom x x = false.
+  Proof.
+    intros ; apply ssrnat.ltnn.
+  Qed.
+
+  Lemma ltn_atom_transitive : forall y x z : nat,
+      ltn_atom x y -> ltn_atom y z -> ltn_atom x z.
+  Proof.
+    exact ssrnat.ltn_trans.
+  Qed.
+
+  Lemma ltn_atom_total : forall a b : nat, [|| ltn_atom a b, eq_atom a b | ltn_atom b a].
+  Proof.
+    move=> a b.
+    rewrite/ltn_atom/eq_atom.
+    case ssrnat.ltngtP ; move=>H ; intuition ; rewrite orb_comm ; intuition.
+  Qed.
+
+(* end hide *)
 End Atom.
 
 (** We make [atom], [fresh], [fresh_not_in] and [atom_fresh_for_list] available
